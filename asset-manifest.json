@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.js": "/acc-pmr/static/js/main.ccfed1f0.js",
+    "static/js/453.20376560.chunk.js": "/acc-pmr/static/js/453.20376560.chunk.js",
+    "static/media/skyprio.png": "/acc-pmr/static/media/skyprio.2be5b20c728a490d105c.png",
+    "index.html": "/acc-pmr/index.html",
+    "main.ccfed1f0.js.map": "/acc-pmr/static/js/main.ccfed1f0.js.map",
+    "453.20376560.chunk.js.map": "/acc-pmr/static/js/453.20376560.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/js/main.ccfed1f0.js"
+  ]
+}
