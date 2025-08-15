@@ -413,6 +413,7 @@ const HelpModal = ({ isOpen, onClose }) => {
                     <StepItem><strong>Survolez</strong> la carte du passager</StepItem>
                     <StepItem><strong>Cliquez</strong> sur l'icône poubelle qui apparaît</StepItem>
                     <StepItem><strong>Confirmez</strong> la suppression</StepItem>
+                    <StepItem><strong>Attention</strong> cette action ne supprime PAS le passager dans Pmr Mgr. Il est simplement retiré de la liste et peut être sélectionné à nouveau si besoin</StepItem>
                   </StepList>
                 </CardContent>
               </Card>
