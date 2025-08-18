@@ -8,7 +8,9 @@ import {
   FaCalendarPlus,
   FaCrown,
   FaWalking,
-  FaTrashAlt
+  FaTrashAlt,
+  FaUserCheck,
+  FaCalendarAlt
 } from 'react-icons/fa';
 
 // Animations
@@ -52,6 +54,21 @@ const agentEnRouteAppear = keyframes`
   }
 `;
 
+const assistedPulse = keyframes`
+  0% { 
+    background-color: rgba(40, 167, 69, 0.1);
+    transform: scale(1);
+  }
+  50% { 
+    background-color: rgba(40, 167, 69, 0.2);
+    transform: scale(1.02);
+  }
+  100% { 
+    background-color: rgba(40, 167, 69, 0.1);
+    transform: scale(1);
+  }
+`;
+
 // Styled Components
 const PassengerCardContainer = styled.div`
   animation: ${fadeIn} 0.4s ease-out;
@@ -63,6 +80,7 @@ const PassengerCardContainer = styled.div`
 
 const PassengerCardContent = styled.div`
   background-color: ${props => {
+    if (props.$isAssisted) return 'rgba(40, 167, 69, 0.1)';
     if (props.$isSkyPriority) return '#e0f0ff';
     const { $timeDiffData } = props;
     return $timeDiffData.minutes < 60 ? 'rgba(220, 53, 69, 0.1)' : 'white';
@@ -76,16 +94,20 @@ const PassengerCardContent = styled.div`
   flex-wrap: wrap;
   cursor: pointer;
   
-  /* Couleur du liseré selon le délai */
+  /* Couleur du liseré selon le délai ou l'état */
   border-left: 6px solid ${props => {
+    if (props.$isAssisted) return '#28a745'; // Vert pour assisté
     const { $timeDiffData } = props;
     if ($timeDiffData.minutes >= 90) return '#198754'; // Vert
     if ($timeDiffData.minutes >= 60) return '#ffc107'; // Orange
     return '#dc3545'; // Rouge
   }};
   
-  /* Animation de clignotement selon le délai */
+  /* Animation de clignotement selon le délai ou l'état */
   ${props => {
+    if (props.$isAssisted) {
+      return css`animation: ${assistedPulse} 2s ease-in-out;`;
+    }
     const { $timeDiffData } = props;
     if ($timeDiffData.minutes < 60) {
       return css`animation: ${blinkFast} 1.3s ease-in-out infinite;`;
@@ -124,7 +146,7 @@ const FlightDetails = styled.div`
 const FlightNumber = styled.span`
   font-weight: 600;
   font-size: 1.1rem;
-  color: #0056b3;
+  color: ${props => props.$isAssisted ? '#155724' : '#0056b3'};
 `;
 
 const PassengerInfo = styled.div`
@@ -137,7 +159,10 @@ const PassengerInfo = styled.div`
 const PassengerName = styled.span`
   font-size: 1rem;
   font-weight: 700;
-  color: #212529;
+  color: ${props => props.$isAssisted ? '#155724' : '#212529'};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 `;
 
 const StatusContainer = styled.div`
@@ -206,6 +231,23 @@ const TimeInfo = styled.div`
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
+`;
+
+const DateTimeContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+`;
+
+const DateDisplay = styled.div`
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 `;
 
 const DepartureTimeDisplay = styled.div`
@@ -217,6 +259,7 @@ const DepartureTimeDisplay = styled.div`
   
   /* Couleur de l'horaire selon les délais */
   color: ${props => {
+    if (props.$isAssisted) return '#28a745';
     const { $timeDiffData } = props;
     if ($timeDiffData.minutes >= 90) return '#198754'; // Vert
     if ($timeDiffData.minutes >= 60) return '#ffc107'; // Orange
@@ -238,21 +281,32 @@ const SkyPriorityBadge = styled.div`
   align-items: center;
   gap: 0.5rem;
   background-color: rgba(255, 0, 0, 1);
-  border: 1px solid #FFD700;
-  border-radius: 6px;
+
+  border-radius: 10px;
   padding: 0.3rem 0.6rem;
   margin-right: 0.5rem;
 `;
 
-const RemoveButton = styled.button`
+const ActionButtonsContainer = styled.div`
   position: absolute;
   top: 50%;
-  right: -3rem;
+  right: -8rem;
   transform: translateY(-50%);
-  background-color: #dc3545;
+  display: flex;
+  gap: 0.5rem;
+  opacity: 0;
+  transition: all 0.2s ease;
+  
+  ${PassengerCardContainer}:hover & {
+    opacity: 1;
+  }
+`;
+
+const ActionButton = styled.button`
+  background-color: ${props => props.$variant === 'assisted' ? '#28a745' : '#dc3545'};
   color: white;
   border: none;
-  border-radius: 50%;
+  border-radius: 6px;
   width: 2.5rem;
   height: 2.5rem;
   display: flex;
@@ -260,61 +314,109 @@ const RemoveButton = styled.button`
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  opacity: 0;
-  
-  ${PassengerCardContainer}:hover & {
-    opacity: 1;
-  }
+  font-size: 0.9rem;
   
   &:hover {
-    background-color: #c82333;
-    transform: translateY(-50%) scale(1.1);
+    background-color: ${props => props.$variant === 'assisted' ? '#218838' : '#c82333'};
+    transform: scale(1.1);
+  }
+  
+  &:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    transform: none;
   }
 `;
 
-// Fonction utilitaire pour extraire l'heure
-const extractTimeHHMM = (timeString) => {
-  if (!timeString) return "??:??";
+const AssistedStatus = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #28a745;
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-left: 1rem;
+`;
+
+// Fonction utilitaire pour extraire date et heure
+const extractDateTimeInfo = (timeString) => {
+  if (!timeString) return { date: "", time: "??:??", fullDateTime: null };
   
+  // Format déjà HH:MM seulement
   if (/^\d{1,2}:\d{2}$/.test(timeString)) {
-    return timeString;
+    const today = new Date();
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const fullDateTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes);
+    
+    return {
+      date: today.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+      time: timeString,
+      fullDateTime
+    };
   }
   
+  // Format DD/MM/YYYY HH:MM ou DD-MM-YYYY HH:MM
   const dateTimeMatch = timeString.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\s+(\d{1,2}):(\d{2})/);
   if (dateTimeMatch) {
-    return `${dateTimeMatch[4]}:${dateTimeMatch[5]}`;
+    const day = dateTimeMatch[1].padStart(2, '0');
+    const month = dateTimeMatch[2].padStart(2, '0');
+    const year = dateTimeMatch[3].length === 2 ? `20${dateTimeMatch[3]}` : dateTimeMatch[3];
+    const hours = dateTimeMatch[4].padStart(2, '0');
+    const minutes = dateTimeMatch[5];
+    
+    const fullDateTime = new Date(year, month - 1, day, hours, minutes);
+    
+    return {
+      date: `${day}/${month}`,
+      time: `${hours}:${minutes}`,
+      fullDateTime
+    };
   }
   
-  const isoMatch = timeString.match(/T(\d{2}):(\d{2})/);
+  // Format ISO
+  const isoMatch = timeString.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
   if (isoMatch) {
-    return `${isoMatch[1]}:${isoMatch[2]}`;
+    const year = isoMatch[1];
+    const month = isoMatch[2];
+    const day = isoMatch[3];
+    const hours = isoMatch[4];
+    const minutes = isoMatch[5];
+    
+    const fullDateTime = new Date(year, month - 1, day, hours, minutes);
+    
+    return {
+      date: `${day}/${month}`,
+      time: `${hours}:${minutes}`,
+      fullDateTime
+    };
   }
   
-  return timeString;
+  return { date: "", time: timeString, fullDateTime: null };
 };
 
-// Fonction pour calculer la différence de temps en minutes
+// Fonction utilitaire pour extraire l'heure (conservée pour compatibilité)
+const extractTimeHHMM = (timeString) => {
+  const { time } = extractDateTimeInfo(timeString);
+  return time;
+};
+
+// Fonction pour calculer la différence de temps en minutes (améliorée pour gérer les dates)
 const calculateTimeDifference = (departureTime, currentTime) => {
-  const timeHHMM = extractTimeHHMM(departureTime);
-  if (!timeHHMM || timeHHMM === "??:??") return 120; // Valeur par défaut: 2h
+  const { fullDateTime } = extractDateTimeInfo(departureTime);
+  if (!fullDateTime) return 120; // Valeur par défaut: 2h
   
   try {
-    const [hours, minutes] = timeHHMM.split(':').map(Number);
-    
-    if (isNaN(hours) || isNaN(minutes)) {
-      return 120;
-    }
-    
     const now = currentTime;
-    const departureDate = new Date();
-    departureDate.setHours(hours, minutes, 0, 0);
     
     // Si l'heure de départ est déjà passée aujourd'hui, considérer qu'elle est pour demain
-    if (departureDate < now) {
-      departureDate.setDate(departureDate.getDate() + 1);
+    if (fullDateTime < now) {
+      fullDateTime.setDate(fullDateTime.getDate() + 1);
     }
     
-    const diffMs = departureDate - now;
+    const diffMs = fullDateTime - now;
     const diffMinutes = diffMs / (1000 * 60);
     
     return diffMinutes;
@@ -323,29 +425,28 @@ const calculateTimeDifference = (departureTime, currentTime) => {
   }
 };
 
-// Fonction pour vérifier si un vol est déjà passé
+// Fonction pour vérifier si un vol est déjà passé (améliorée)
 const isFlightPassed = (departureTime, currentTime) => {
-  const timeHHMM = extractTimeHHMM(departureTime);
-  if (!timeHHMM || timeHHMM === "??:??") return false;
+  const { fullDateTime } = extractDateTimeInfo(departureTime);
+  if (!fullDateTime) return false;
   
   try {
-    const [hours, minutes] = timeHHMM.split(':').map(Number);
-    
-    if (isNaN(hours) || isNaN(minutes)) {
-      return false;
-    }
-    
     const now = currentTime;
-    const departureDate = new Date();
-    departureDate.setHours(hours, minutes, 0, 0);
+    // Ajouter une marge de 30 minutes
+    const marginTime = new Date(now.getTime());
     
-    return departureDate < now;
+    return fullDateTime < marginTime;
   } catch (e) {
     return false;
   }
 };
 
-const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
+const PassengerItem = ({ 
+  passenger, 
+  onToggleSkyPriority, 
+  onMarkAsAssisted,
+  onRemove 
+}) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isNewlyAddedAgent, setIsNewlyAddedAgent] = useState(false);
   const [agentEnRouteKey, setAgentEnRouteKey] = useState(0);
@@ -365,6 +466,8 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
       minute: '2-digit'
     }),
     isSkyPriority: passenger.isSkyPriority || false,
+    isAssisted: passenger.isAssisted || false,
+    assistedAt: passenger.assistedAt || null,
     goAcc: passenger.goAcc || '',
     idPax: passenger.idPax
   };
@@ -396,8 +499,8 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
   // Vérifier si un agent est en route
   const isAgentEnRoute = safePassenger.goAcc && safePassenger.goAcc.trim() !== '';
   
-  // Afficher l'heure de départ
-  const displayTime = extractTimeHHMM(safePassenger.departureTime);
+  // Extraire les informations de date et heure
+  const { date, time } = extractDateTimeInfo(safePassenger.departureTime);
 
   // Surveillance des changements de goAcc
   useEffect(() => {
@@ -478,17 +581,23 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
     };
   }, []);
 
-  // Gestionnaire de suppression
+  // Gestionnaires d'événements
   const handleRemove = (e) => {
-    e.stopPropagation(); // Empêcher le clic sur la carte
+    e.stopPropagation();
     if (onRemove) {
       onRemove(safePassenger.id);
     }
   };
 
-  // Gestionnaire de clic pour SkyPriority
+  const handleAssistedClick = (e) => {
+    e.stopPropagation();
+    if (onMarkAsAssisted && !safePassenger.isAssisted) {
+      onMarkAsAssisted(safePassenger.id);
+    }
+  };
+
   const handleCardClick = () => {
-    if (onToggleSkyPriority) {
+    if (onToggleSkyPriority && !safePassenger.isAssisted) {
       onToggleSkyPriority(safePassenger.id);
     }
   };
@@ -500,28 +609,33 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
     isNewlyAddedAgent: isNewlyAddedAgent,
     agentEnRouteKey: agentEnRouteKey,
     timeDiffMinutes: timeDiffData.minutes,
-    isPassed: isPassed
+    isPassed: isPassed,
+    isAssisted: safePassenger.isAssisted
   });
 
   return (
     <PassengerCardContainer $isPassed={isPassed}>
       <PassengerCardContent 
         $isSkyPriority={safePassenger.isSkyPriority}
+        $isAssisted={safePassenger.isAssisted}
         $timeDiffData={timeDiffData}
         onClick={handleCardClick}
       >
         <MainInfo>
           <FlightInfo>
-            <FaPlane size={20} color="#0056b3" />
+            <FaPlane size={20} color={safePassenger.isAssisted ? "#28a745" : "#0056b3"} />
             <FlightDetails>
-              <FlightNumber>{safePassenger.flightNumber}</FlightNumber>
+              <FlightNumber $isAssisted={safePassenger.isAssisted}>
+                {safePassenger.flightNumber}
+              </FlightNumber>
             </FlightDetails>
           </FlightInfo>
           
           <PassengerInfo>
-            <FaUser size={14} color="#212529" />
-            <PassengerName>
+            <FaUser size={14} color={safePassenger.isAssisted ? "#155724" : "#212529"} />
+            <PassengerName $isAssisted={safePassenger.isAssisted}>
               {safePassenger.lastName} {safePassenger.firstName}
+              {safePassenger.isAssisted && <FaUserCheck color="#28a745" size={16} />}
             </PassengerName>
           </PassengerInfo>
 
@@ -531,7 +645,7 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
             </StatusBadge>
             
             {/* Indicateur d'agent en route */}
-            {isAgentEnRoute && (
+            {isAgentEnRoute && !safePassenger.isAssisted && (
               <AgentEnRouteIndicator 
                 key={`agent-${safePassenger.id}-${agentEnRouteKey}`}
                 $isNewlyAdded={isNewlyAddedAgent}
@@ -551,10 +665,28 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
             </SkyPriorityBadge>
           )}
           
-          <DepartureTimeDisplay $timeDiffData={timeDiffData}>
-            <FaClock size={18} />
-            {displayTime}
-          </DepartureTimeDisplay>
+          <DateTimeContainer>
+            {date && (
+              <DateDisplay>
+                <FaCalendarAlt size={12} />
+                {date}
+              </DateDisplay>
+            )}
+            <DepartureTimeDisplay 
+              $timeDiffData={timeDiffData}
+              $isAssisted={safePassenger.isAssisted}
+            >
+              <FaClock size={18} />
+              {time}
+            </DepartureTimeDisplay>
+          </DateTimeContainer>
+          
+          {safePassenger.isAssisted && (
+            <AssistedStatus>
+              <FaUserCheck />
+              Assisté à {safePassenger.assistedAt}
+            </AssistedStatus>
+          )}
           
           <AddedTimeContainer>
             <FaCalendarPlus size={14} />
@@ -563,14 +695,28 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
         </TimeInfo>
       </PassengerCardContent>
       
-      {/* Bouton de suppression */}
-      <RemoveButton 
-        onClick={handleRemove}
-        aria-label="Retirer le passager de la liste"
-        title="Retirer le passager de la liste"
-      >
-        <FaTrashAlt size={14} />
-      </RemoveButton>
+      {/* Boutons d'action */}
+      {!safePassenger.isAssisted && (
+        <ActionButtonsContainer>
+          <ActionButton 
+            $variant="assisted"
+            onClick={handleAssistedClick}
+            aria-label="Marquer comme PMR assisté"
+            title="Marquer ce passager comme assisté par un agent PMR"
+          >
+            <FaUserCheck size={14} />
+          </ActionButton>
+          
+          <ActionButton 
+            $variant="remove"
+            onClick={handleRemove}
+            aria-label="Retirer le passager de la liste"
+            title="Retirer le passager de la liste"
+          >
+            <FaTrashAlt size={14} />
+          </ActionButton>
+        </ActionButtonsContainer>
+      )}
     </PassengerCardContainer>
   );
 };
@@ -586,10 +732,13 @@ PassengerItem.propTypes = {
     departureTime: PropTypes.string,
     addedAt: PropTypes.string,
     isSkyPriority: PropTypes.bool,
+    isAssisted: PropTypes.bool,
+    assistedAt: PropTypes.string,
     goAcc: PropTypes.string,
     idPax: PropTypes.string
   }).isRequired,
   onToggleSkyPriority: PropTypes.func,
+  onMarkAsAssisted: PropTypes.func,
   onRemove: PropTypes.func
 };
 

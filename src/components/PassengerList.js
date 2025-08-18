@@ -2,8 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled, { keyframes } from 'styled-components';
 import PassengerItem from './PassengerItem';
 import PassengerSelector from './PassengerSelector';
-import HelpModal from './HelpModal';
-import { FaUserFriends, FaCrown, FaSyncAlt, FaQuestionCircle } from 'react-icons/fa';
+import { FaUserFriends, FaCrown, FaSyncAlt,FaMapMarkerAlt, FaExchangeAlt } from 'react-icons/fa';
+import { appendSelectedPassenger, deleteRowByUuid, updateSelectedPassenger } from '../services/SelectedPaxService';
+import { SITE_ID } from '../config/siteConfig';
+
+
+
 
 // Animations
 const fadeIn = keyframes`
@@ -106,14 +110,6 @@ const RefreshButton = styled.button`
   }
 `;
 
-const HelpButton = styled(RefreshButton)`
-  background-color: rgba(255, 255, 255, 0.2);
-  
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.3);
-    transform: scale(1.05);
-  }
-`;
 
 const ListContent = styled.div`
   animation: ${fadeIn} 0.5s ease-out;
@@ -134,6 +130,43 @@ const EmptyText = styled.h3`
   font-weight: 600;
   margin: 0;
 `;
+
+const SiteBadge = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25);
+`;
+
+const SiteCode = styled.span`
+  background: rgba(255,255,255,0.25);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+`;
+
+const ChangeSiteButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.35rem 0.55rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  &:hover { background: rgba(255,255,255,0.22); transform: translateY(-1px); }
+`;
+
+
+
 
 // Fonction utilitaire pour extraire l'heure
 const extractTimeHHMM = (timeString) => {
@@ -212,9 +245,48 @@ const parseSheetData = (values) => {
   return sheetDataMap;
 };
 
+// Fonction utilitaire pour extraire date et heure
+const extractDateTimeInfo = (timeString) => {
+  if (!timeString) return { date: "", time: "??:??", fullDateTime: null };
+  
+  console.log(`🔍 Analyse du departureTime: "${timeString}"`);
+  
+  // Format DD/MM/YYYY HH:MM ou DD-MM-YYYY HH:MM (PRIORITAIRE)
+  const dateTimeMatch = timeString.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\s+(\d{1,2}):(\d{2})/);
+  if (dateTimeMatch) {
+    const day = dateTimeMatch[1].padStart(2, '0');
+    const month = dateTimeMatch[2].padStart(2, '0');
+    const year = dateTimeMatch[3].length === 2 ? `20${dateTimeMatch[3]}` : dateTimeMatch[3];
+    const hours = dateTimeMatch[4].padStart(2, '0');
+    const minutes = dateTimeMatch[5];
+    
+    const fullDateTime = new Date(year, month - 1, day, hours, minutes);
+    
+    return {
+      date: `${day}/${month}`,
+      time: `${hours}:${minutes}`,
+      fullDateTime
+    };
+  }
+  
+  // Format HH:MM seulement - PAS DE DATE
+  if (/^\d{1,2}:\d{2}$/.test(timeString)) {
+    const today = new Date();
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const fullDateTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes);
+    
+    return {
+      date: "",
+      time: timeString,
+      fullDateTime
+    };
+  }
+  
+  return { date: "", time: timeString, fullDateTime: null };
+};
+
 const PassengerList = ({ passengers: initialPassengers, setPassengers }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
   const refreshIntervalRef = useRef(null);
   const agentStatusRef = useRef({}); // Suivi des statuts GO-ACC
   
@@ -306,6 +378,13 @@ const PassengerList = ({ passengers: initialPassengers, setPassengers }) => {
               console.log(`🎬 Événement dispatché pour ${passenger.lastName}`);
             }, 100);
           }
+
+          // Si on a ce passager dans selected_pax, pousse la mise à jour côté feuille du comptoir
+          if (passenger.selectedUuid) {
+            try {
+              updateSelectedPassenger(passenger.selectedUuid, { goAcc: newGoAcc || '' });
+            } catch (_) {}
+          }
           
           return {
             ...passenger,
@@ -335,63 +414,63 @@ const PassengerList = ({ passengers: initialPassengers, setPassengers }) => {
   };
 
   // Gestionnaire de sélection
-  const handlePassengerSelect = (passenger) => {
-    if (passenger) {
-      console.log("➕ Ajout passager:", {
-        nom: `${passenger.lastName} ${passenger.firstName}`,
-        idPax: passenger.idPax,
-        goAcc: `"${passenger.goAcc}"`
-      });
-      
-      // Vérifier si déjà présent
-      const exists = passengers.find(p => p.idPax === passenger.idPax);
-      if (exists) {
-        console.warn("⚠️ Passager déjà présent");
-        return;
-      }
-      
-      const now = new Date();
-      const newPassenger = {
-        ...passenger,
-        id: `passenger-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        addedAt: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-        isSkyPriority: false
-      };
-      
-      updatePassengers([...passengers, newPassenger]);
-      
-      // Si le passager a déjà un GO-ACC, déclencher l'animation
-      if (newPassenger.goAcc && newPassenger.goAcc.trim() !== '') {
-        setTimeout(() => {
-          const event = new CustomEvent('agentStatusChanged', {
-            detail: {
-              passengerId: newPassenger.id,
-              idPax: newPassenger.idPax,
-              hasAgent: true,
-              isInitial: true
-            }
-          });
-          window.dispatchEvent(event);
-          console.log(`🎬 Animation initiale pour ${newPassenger.lastName}`);
-        }, 200);
-      }
-    }
-  };
+const handlePassengerSelect = async (passenger) => {
+  if (passenger) {
+    // ... tes logs + vérif doublon
+
+    const now = new Date();
+    const newPassenger = {
+      ...passenger,
+      id: `passenger-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      addedAt: now.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }),
+      isSkyPriority: false
+    };
+
+
+   try {
+     const { uuid } = await appendSelectedPassenger(newPassenger);
+     const withPersist = { ...newPassenger, selectedUuid: uuid };
+     updatePassengers([...passengers, withPersist]);
+   } catch (err) {
+     console.error('❌ Echec append selected_pax:', err);
+     return;
+   }
+
+    // ... animation éventuelle inchangée
+  }
+};
 
   // Gestionnaire SkyPriority
-  const handleToggleSkyPriority = (passengerId) => {
-    const updated = passengers.map(p =>
-      p.id === passengerId ? { ...p, isSkyPriority: !p.isSkyPriority } : p
-    );
-    updatePassengers(updated);
-  };
+const handleToggleSkyPriority = (passengerId) => {
+  const pax = passengers.find(p => p.id === passengerId);
+  if (!pax) return;
+
+  const newVal = !pax.isSkyPriority;
+  const updated = passengers.map(p =>
+    p.id === passengerId ? { ...p, isSkyPriority: newVal } : p
+  );
+  updatePassengers(updated);
+
+  // push en arrière-plan vers la feuille
+  if (pax.selectedUuid) {
+    try {
+      updateSelectedPassenger(pax.selectedUuid, { isSkyPriority: newVal });
+    } catch (_) {}
+  }
+};
 
   // Gestionnaire de suppression
-  const handleRemovePassenger = (passengerId) => {
-    console.log("🗑️ Suppression du passager:", passengerId);
-    const updated = passengers.filter(p => p.id !== passengerId);
-    updatePassengers(updated);
-  };
+const handleRemovePassenger = (passengerId) => {
+  console.log("🗑️ Suppression du passager:", passengerId);
+  const pax = passengers.find(p => p.id === passengerId);
+
+  // UI immédiate
+  const updated = passengers.filter(p => p.id !== passengerId);
+  updatePassengers(updated);
+
+ // Fire-and-forget (pas d'attente, pas d'erreur bloquante)
+ if (pax?.selectedUuid) deleteRowByUuid(pax.selectedUuid);
+ };
 
   // Effet pour le rafraîchissement automatique
   useEffect(() => {
@@ -411,6 +490,26 @@ const PassengerList = ({ passengers: initialPassengers, setPassengers }) => {
       };
     }
   }, [passengers.length]);
+
+  const handleMarkAsAssisted = (passengerId) => {
+  console.log("✅ Marquage PMR assisté:", passengerId);
+  const now = new Date();
+  const updated = passengers.map(p =>
+    p.id === passengerId ? { 
+      ...p, 
+      isAssisted: true,
+      assistedAt: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    } : p
+  );
+  updatePassengers(updated);
+  
+  // Retirer automatiquement après 5 secondes
+  setTimeout(() => {
+    const filtered = passengers.filter(p => p.id !== passengerId);
+    updatePassengers(filtered);
+    console.log(`🗑️ Passager assisté retiré automatiquement: ${passengerId}`);
+  }, 5000);
+};
 
 
   const sortedPassengers = [...passengers].sort((a, b) => {
@@ -433,6 +532,19 @@ const PassengerList = ({ passengers: initialPassengers, setPassengers }) => {
   return dateA - dateB; // Chronologique croissant
 });
 
+const handleChangeSite = () => {
+  const current = SITE_ID || '';
+  const next = window.prompt('Changer de comptoir (SITE_ID) :', current);
+  if (!next || next === current) return;
+
+  const url = new URL(window.location.href);
+  url.searchParams.set('site', next.trim());
+  window.location.href = url.toString(); // recharge avec ?site=XXX
+};
+
+
+
+
   return (
     <ListContainer>
       <ListHeader>
@@ -441,6 +553,16 @@ const PassengerList = ({ passengers: initialPassengers, setPassengers }) => {
             <FaUserFriends size={20} />
           </TitleIcon>
           <Title>Passagers PMR en attente d'assistance</Title>
+          <SiteBadge title="Comptoir / Site actif">
+            <FaMapMarkerAlt size={14} />
+            <span>Site</span>
+            <SiteCode>{SITE_ID}</SiteCode>
+            {/*}
+            <ChangeSiteButton onClick={handleChangeSite} title="Changer de site (recharge la page)">
+              <FaExchangeAlt size={12} />
+              Changer
+            </ChangeSiteButton> */}
+          </SiteBadge>
         </TitleSection>
         
         <SelectorSection>
@@ -462,23 +584,21 @@ const PassengerList = ({ passengers: initialPassengers, setPassengers }) => {
             <FaSyncAlt className={isRefreshing ? 'fa-spin' : ''} />
             {isRefreshing ? 'Synchronisation...' : 'Actualiser'}
           </RefreshButton>
-          
-          <HelpButton onClick={() => setShowHelpModal(true)}>
-            <FaQuestionCircle />
-            Aide
-          </HelpButton>
+      
         </SelectorSection>
       </ListHeader>
       
       {passengers.length > 0 ? (
         <ListContent>
           {sortedPassengers.map((passenger) => (
-            <PassengerItem 
-              key={passenger.id}
-              passenger={passenger} 
-              onToggleSkyPriority={handleToggleSkyPriority}
-              onRemove={handleRemovePassenger}
-            />
+          <PassengerItem 
+            key={passenger.id}
+            passenger={passenger} 
+            onToggleSkyPriority={handleToggleSkyPriority}
+            onMarkAsAssisted={handleMarkAsAssisted}  // ← Vérifiez cette ligne
+            onRemove={handleRemovePassenger}
+            extractDateTimeInfo={extractDateTimeInfo}
+          />
           ))}
         </ListContent>
       ) : (
@@ -486,12 +606,8 @@ const PassengerList = ({ passengers: initialPassengers, setPassengers }) => {
           <EmptyText>Aucun passager PMR enregistré</EmptyText>
         </EmptyList>
       )}
-      
-      {/* Modal d'aide */}
-      <HelpModal 
-        isOpen={showHelpModal} 
-        onClose={() => setShowHelpModal(false)} 
-      />
+    
+
     </ListContainer>
   );
 };

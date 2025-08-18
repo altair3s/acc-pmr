@@ -16,7 +16,12 @@ import {
   FaBug,
   FaQuestionCircle,
   FaRocket,
-  FaHeart
+  FaHeart,
+  FaUserPlus,
+  FaUserCheck,
+  FaClipboardList,
+  FaRoute,
+  FaHandsHelping
 } from 'react-icons/fa';
 
 // Animations
@@ -310,6 +315,56 @@ const FeatureText = styled.span`
   font-weight: 500;
 `;
 
+const ProcessFlow = styled.div`
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 1rem 0;
+  border: 2px solid #dee2e6;
+`;
+
+const FlowStep = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const FlowIcon = styled.div`
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  border-radius: 50%;
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+`;
+
+const FlowContent = styled.div`
+  flex: 1;
+`;
+
+const FlowTitle = styled.h4`
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #212529;
+`;
+
+const FlowDescription = styled.p`
+  margin: 0;
+  color: #495057;
+  line-height: 1.6;
+`;
+
 const HelpModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
@@ -352,6 +407,10 @@ const HelpModal = ({ isOpen, onClose }) => {
                 <FeatureText>Gestion des passagers PMR</FeatureText>
               </FeatureItem>
               <FeatureItem>
+                <FeatureIcon><FaUserPlus /></FeatureIcon>
+                <FeatureText>Ajout manuel de passagers</FeatureText>
+              </FeatureItem>
+              <FeatureItem>
                 <FeatureIcon><FaWalking /></FeatureIcon>
                 <FeatureText>Suivi des agents en route</FeatureText>
               </FeatureItem>
@@ -360,10 +419,81 @@ const HelpModal = ({ isOpen, onClose }) => {
                 <FeatureText>Gestion SkyPriority</FeatureText>
               </FeatureItem>
               <FeatureItem>
+                <FeatureIcon><FaUserCheck /></FeatureIcon>
+                <FeatureText>Marquage PMR assisté</FeatureText>
+              </FeatureItem>
+              <FeatureItem>
                 <FeatureIcon><FaSyncAlt /></FeatureIcon>
                 <FeatureText>Synchronisation automatique</FeatureText>
               </FeatureItem>
             </FeatureGrid>
+          </Section>
+
+          {/* Démarche de traitement */}
+          <Section>
+            <SectionHeader>
+              <SectionIcon>
+                <FaRoute size={20} />
+              </SectionIcon>
+              <SectionTitle>Démarche de traitement à l'espace accueil</SectionTitle>
+            </SectionHeader>
+
+            <ProcessFlow>
+              <FlowStep>
+                <FlowIcon>1</FlowIcon>
+                <FlowContent>
+                  <FlowTitle>🔍 Identification du passager</FlowTitle>
+                  <FlowDescription>
+                    Le passager se présente à l'espace accueil. Vérifiez son identité et ses besoins d'assistance 
+                    en consultant sa carte dans l'application. Le code couleur indique l'urgence.
+                  </FlowDescription>
+                </FlowContent>
+              </FlowStep>
+
+              <FlowStep>
+                <FlowIcon>2</FlowIcon>
+                <FlowContent>
+                  <FlowTitle>📋 Évaluation des besoins</FlowTitle>
+                  <FlowDescription>
+                    Confirmez le type d'assistance PMR (WCHR/WCHS/WCHC). Si le passager n'est pas dans la liste, 
+                    utilisez "Ajouter passager" pour l'enregistrer manuellement avec ses informations de vol.
+                  </FlowDescription>
+                </FlowContent>
+              </FlowStep>
+
+              <FlowStep>
+                <FlowIcon>3</FlowIcon>
+                <FlowContent>
+                  <FlowTitle>⭐ Gestion des priorités</FlowTitle>
+                  <FlowDescription>
+                    Marquez le passager SkyPriority si nécessaire (clic sur la carte). 
+                    Priorisez les cartes rouges (moins de 60 min) et orange (60-90 min).
+                  </FlowDescription>
+                </FlowContent>
+              </FlowStep>
+
+              <FlowStep>
+                <FlowIcon>4</FlowIcon>
+                <FlowContent>
+                  <FlowTitle>📞 Coordination avec l'agent</FlowTitle>
+                  <FlowDescription>
+                    Surveillez l'animation "Agent en route" qui apparaît automatiquement quand 
+                    le jalon GO-ACC est activé. Coordinonnez l'assistance selon les besoins.
+                  </FlowDescription>
+                </FlowContent>
+              </FlowStep>
+
+              <FlowStep>
+                <FlowIcon>5</FlowIcon>
+                <FlowContent>
+                  <FlowTitle>✅ Finalisation de l'assistance</FlowTitle>
+                  <FlowDescription>
+                    Une fois l'assistance terminée, cliquez sur "PMR Assisté" pour marquer 
+                    le passager comme pris en charge. Il disparaîtra automatiquement de la liste.
+                  </FlowDescription>
+                </FlowContent>
+              </FlowStep>
+            </ProcessFlow>
           </Section>
 
           {/* Mode d'emploi */}
@@ -379,7 +509,7 @@ const HelpModal = ({ isOpen, onClose }) => {
               <Card $color="#28a745">
                 <CardHeader>
                   <CardIcon $color="#28a745"><FaSearch /></CardIcon>
-                  <CardTitle>1. Ajouter un passager</CardTitle>
+                  <CardTitle>1. Ajouter un passager (liste)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <StepList>
@@ -390,10 +520,24 @@ const HelpModal = ({ isOpen, onClose }) => {
                 </CardContent>
               </Card>
 
+              <Card $color="#007bff">
+                <CardHeader>
+                  <CardIcon $color="#007bff"><FaUserPlus /></CardIcon>
+                  <CardTitle>2. Ajouter un passager (manuel)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <StepList>
+                    <StepItem><strong>Cliquez</strong> sur "Ajouter passager" dans le menu</StepItem>
+                    <StepItem><strong>Remplissez</strong> le formulaire (nom, vol, date/heure, type PMR)</StepItem>
+                    <StepItem><strong>Validez</strong> pour créer la carte passager</StepItem>
+                  </StepList>
+                </CardContent>
+              </Card>
+
               <Card $color="#ffc107">
                 <CardHeader>
                   <CardIcon $color="#ffc107"><FaCrown /></CardIcon>
-                  <CardTitle>2. Gérer SkyPriority</CardTitle>
+                  <CardTitle>3. Gérer SkyPriority</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <StepList>
@@ -403,15 +547,29 @@ const HelpModal = ({ isOpen, onClose }) => {
                 </CardContent>
               </Card>
 
-              <Card $color="#dc3545">
+              <Card $color="#28a745">
                 <CardHeader>
-                  <CardIcon $color="#dc3545"><FaTrashAlt /></CardIcon>
-                  <CardTitle>3. Supprimer un passager</CardTitle>
+                  <CardIcon $color="#28a745"><FaUserCheck /></CardIcon>
+                  <CardTitle>4. Marquer PMR assisté</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <StepList>
                     <StepItem><strong>Survolez</strong> la carte du passager</StepItem>
-                    <StepItem><strong>Cliquez</strong> sur l'icône poubelle qui apparaît</StepItem>
+                    <StepItem><strong>Cliquez</strong> sur le bouton vert "PMR Assisté"</StepItem>
+                    <StepItem>Le passager <strong>disparaît automatiquement</strong> après 5 secondes</StepItem>
+                  </StepList>
+                </CardContent>
+              </Card>
+
+              <Card $color="#dc3545">
+                <CardHeader>
+                  <CardIcon $color="#dc3545"><FaTrashAlt /></CardIcon>
+                  <CardTitle>5. Supprimer un passager</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <StepList>
+                    <StepItem><strong>Survolez</strong> la carte du passager</StepItem>
+                    <StepItem><strong>Cliquez</strong> sur l'icône poubelle rouge</StepItem>
                     <StepItem><strong>Confirmez</strong> la suppression</StepItem>
                   </StepList>
                 </CardContent>
@@ -420,7 +578,7 @@ const HelpModal = ({ isOpen, onClose }) => {
               <Card $color="#17a2b8">
                 <CardHeader>
                   <CardIcon $color="#17a2b8"><FaWalking /></CardIcon>
-                  <CardTitle>4. Suivre les agents</CardTitle>
+                  <CardTitle>6. Suivre les agents</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <StepList>
@@ -507,6 +665,7 @@ const HelpModal = ({ isOpen, onClose }) => {
                   <li><strong>Utilisez SkyPriority</strong> pour marquer les VIP ou cas spéciaux</li>
                   <li><strong>Surveillez</strong> les animations "Agent en route" pour éviter les doublons</li>
                   <li><strong>Rafraîchissez manuellement</strong> si nécessaire avec le bouton "Actualiser"</li>
+                  <li><strong>Ajoutez manuellement</strong> les passagers non présents dans la liste</li>
                 </ul>
               </TipContent>
             </TipBox>
@@ -520,7 +679,8 @@ const HelpModal = ({ isOpen, onClose }) => {
                 <ul>
                   <li><strong>Coordination</strong> avec les agents via le jalon GO-ACC</li>
                   <li><strong>Surveillez</strong> les compteurs de passagers pour la charge de travail</li>
-                  <li><strong>Les vols passés</strong> disparaissent automatiquement</li>
+                  <li><strong>Les vols passés</strong> disparaissent automatiquement (sans délai)</li>
+                  <li><strong>Marquez "PMR Assisté"</strong> dès la prise en charge terminée</li>
                 </ul>
               </TipContent>
             </TipBox>
@@ -546,7 +706,8 @@ const HelpModal = ({ isOpen, onClose }) => {
                   <ul>
                     <li>Vérifiez la connexion Internet</li>
                     <li>Actualisez avec le bouton "Actualiser"</li>
-                    <li>Vérifiez la STD </li>
+                    <li>Vérifiez la STD et la date du vol</li>
+                    <li>Utilisez l'ajout manuel si nécessaire</li>
                   </ul>
                 </CardContent>
               </Card>
@@ -574,9 +735,10 @@ const HelpModal = ({ isOpen, onClose }) => {
                 <CardContent>
                   <strong>✅ Pour une meilleure performance :</strong>
                   <ul>
-                    <li>Utilisez MS Edge recent</li>
+                    <li>Utilisez MS Edge récent</li>
                     <li>Gardez l'onglet actif</li>
                     <li>Évitez de surcharger la liste</li>
+                    <li>Marquez "PMR Assisté" régulièrement</li>
                   </ul>
                 </CardContent>
               </Card>
@@ -594,20 +756,21 @@ const HelpModal = ({ isOpen, onClose }) => {
 
             <CardContent>
               <p>
-                <strong>🎯 Version :</strong> 2.0 - Accueil PMR <br/>
-                <strong>⚡ Fonctionnalités :</strong> Synchronisation temps réel, animations, gestion SkyPriority<br/>
+                <strong>🎯 Version :</strong> 3.0 - Accueil PMR avec ajout manuel<br/>
+                <strong>⚡ Fonctionnalités :</strong> Synchronisation temps réel, animations, gestion SkyPriority, ajout manuel, marquage PMR assisté<br/>
                 <strong>🔄 Rafraîchissement :</strong> Automatique toutes les 10 secondes<br/>
+                <strong>🧹 Nettoyage :</strong> Vols passés supprimés immédiatement<br/>
               </p>
               
               <TipBox>
                 <TipHeader>
                   <FaRocket color="#4caf50" />
-                  <TipTitle>Application </TipTitle>
+                  <TipTitle>Application moderne</TipTitle>
                 </TipHeader>
                 <TipContent>
                   Cette application a été conçue pour optimiser la gestion des passagers PMR aux points accueil,
                   avec une interface moderne et intuitive. Pour toute suggestion ou amélioration, 
-                  n'hésitez pas à faire un retour !
+                  utilisez le bouton "Signaler" dans le menu !
                 </TipContent>
               </TipBox>
             </CardContent>
