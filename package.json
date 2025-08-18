@@ -1,237 +1,52 @@
 {
-  
-  
-  "name": "acc-pmrv2",
-  
-  
+  "home": "https://altair3s.github.io/accpmrv2",
+  "name": "accpmrv2",
   "version": "0.1.0",
-  
-  
   "private": true,
-  
-  
   "dependencies": {
-  
-  
-    
-  
-  "@emailjs/browser": "^4.4.1",
-  
-  
-    
-  
-  "@testing-library/dom": "^10.4.1",
-  
-  
-    
-  
-  "@testing-library/jest-dom": "^6.6.4",
-  
-  
-    
-  
-  "@testing-library/react": "^16.3.0",
-  
-  
-    
-  
-  "@testing-library/user-event": "^13.5.0",
-  
-  
-    
-  
-  "echarts": "^6.0.0",
-  
-  
-    
-  
-  "firebase": "^12.1.0",
-  
-  
-    
-  
-  "react": "^19.1.1",
-  
-  
-    
-  
-  "react-dom": "^19.1.1",
-  
-  
-    
-  
-  "react-icons": "^5.5.0",
-  
-  
-    
-  
-  "react-router-dom": "^7.8.0",
-  
-  
-    
-  
-  "react-scripts": "5.0.1",
-  
-  
-    
-  
-  "styled-components": "^6.1.19",
-  
-  
-    
-  
-  "web-vitals": "^2.1.4"
-  
-  
+    "@emailjs/browser": "^4.4.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.6.4",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "echarts": "^6.0.0",
+    "firebase": "^12.1.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.8.0",
+    "react-scripts": "5.0.1",
+    "styled-components": "^6.1.19",
+    "web-vitals": "^2.1.4"
   },
-  
-  
   "scripts": {
-  
-  
-    
-  
-  "start": "react-scripts start",
-  
-  
-    
-  
-  "predeploy": "npm run build",
-  
-  
-    
-  
-  "deploy": "gh-pages -d build",
-  
-  
-    
-  
-  "build": "react-scripts build",
-  
-  
-    
-  
-  "test": "react-scripts test",
-  
-  
-    
-  
-  "eject": "react-scripts eject"
-  
-  
+    "start": "react-scripts start",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
   },
-  
-  
   "eslintConfig": {
-  
-  
-    
-  
-  "extends": [
-  
-  
-    
-  
-    
-  
-  "react-app",
-  
-  
-    
-  
-    
-  
-  "react-app/jest"
-  
-  
-    
-  
-  ]
-  
-  
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
   },
-  
-  
   "browserslist": {
-  
-  
-    
-  
-  "production": [
-  
-  
-    
-  
-    
-  
-  ">0.2%",
-  
-  
-    
-  
-    
-  
-  "not dead",
-  
-  
-    
-  
-    
-  
-  "not op_mini all"
-  
-  
-    
-  
-  ],
-  
-  
-    
-  
-  "development": [
-  
-  
-    
-  
-    
-  
-  "last 1 chrome version",
-  
-  
-    
-  
-    
-  
-  "last 1 firefox version",
-  
-  
-    
-  
-    
-  
-  "last 1 safari version"
-  
-  
-    
-  
-  ]
-  
-  
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   },
-  
-  
   "devDependencies": {
-  
-  
-    
-  
-  "ajv": "^7.2.4",
-  
-  
-    
-  
-  "gh-pages": "^6.3.0"
-  
-  
+    "ajv": "^7.2.4",
+    "gh-pages": "^6.3.0"
   }
 }
