@@ -1,3 +1,4 @@
+// Gestionnaire de déconnexion
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import styled, { createGlobalStyle } from 'styled-components';
@@ -8,12 +9,19 @@ import ScannerSimulator from './components/ScannerSimulator';
 import TVDisplay from './components/TVDisplay';
 import StatsPage from './components/StatsPage';
 import LoginPage from './components/LoginPage';
+import HelpModal from './components/HelpModal';
+import FeedbackModal from './components/FeedbackModal';
+import AddPassengerModal from './components/AddPassengerModal';
+import emailjs from '@emailjs/browser';
 // Importation des icônes
 import { 
   FaUserFriends, 
   FaSignOutAlt,
   FaUser,
-  FaSpinner
+  FaSpinner,
+  FaQuestionCircle,
+  FaCommentDots,
+  FaUserPlus
 } from 'react-icons/fa';
 
 // Styles globaux améliorés
@@ -226,6 +234,58 @@ const NavButton = styled(Link)`
   }
 `;
 
+const NavActionButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--secondary-color);
+  padding: 0.8rem 1.2rem;
+  border-radius: 12px;
+  transition: var(--transition);
+  font-weight: 500;
+  font-size: 0.95rem;
+  position: relative;
+  overflow: hidden;
+  background: none;
+  border: none;
+  cursor: pointer;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s;
+  }
+  
+  &:hover {
+    background: rgba(139, 69, 255, 0.1);
+    color: var(--primary-color);
+    transform: translateY(-2px);
+    
+    &::before {
+      left: 100%;
+    }
+  }
+`;
+
+const FeedbackNavButton = styled(NavActionButton)`
+  &:hover {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+  }
+`;
+
+const AddPassengerNavButton = styled(NavActionButton)`
+  &:hover {
+    background: rgba(0, 123, 255, 0.1);
+    color: #007bff;
+  }
+`;
+
 const MainContent = styled.main`
   flex: 1;
   padding: 2rem 1rem;
@@ -247,7 +307,7 @@ const Footer = styled.footer`
 `;
 
 // Composant de navigation
-const Navigation = () => {
+const Navigation = ({ onOpenHelp, onOpenFeedback, onOpenAddPassenger }) => {
   const location = useLocation();
   
   return (
@@ -255,14 +315,26 @@ const Navigation = () => {
       <NavButton to="/" className={location.pathname === '/' ? 'active' : ''}>
         <FaUserFriends size={16} /> Passagers
       </NavButton>
+      
+      <AddPassengerNavButton onClick={onOpenAddPassenger}>
+        <FaUserPlus size={16} /> Ajouter passager
+      </AddPassengerNavButton>
+      
+      <FeedbackNavButton onClick={onOpenFeedback}>
+        <FaCommentDots size={16} /> Signaler
+      </FeedbackNavButton>
+      
+      <NavActionButton onClick={onOpenHelp}>
+        <FaQuestionCircle size={16} /> Aide
+      </NavActionButton>
     </Nav>
   );
 };
 
-
 const generateUniqueId = () => {
   return `passenger-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
+
 // Composant principal
 const App = () => {
   // États pour l'authentification
@@ -271,6 +343,11 @@ const App = () => {
   
   // État pour stocker les passagers
   const [passengers, setPassengers] = useState([]);
+  
+  // États pour les modals
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showAddPassengerModal, setShowAddPassengerModal] = useState(false);
   
   // Écouter les changements d'état d'authentification
   useEffect(() => {
@@ -328,7 +405,19 @@ const App = () => {
      setPassengers(prevPassengers => [...prevPassengers, passengerWithConsistentId, passengerWithTime]);
   };
   
-  // Gestionnaire de déconnexion
+  // Gestionnaire d'ajout de passager manuel
+  const handleAddPassenger = (newPassengerData) => {
+    console.log("➕ Ajout passager manuel:", newPassengerData);
+    
+    const now = new Date();
+    const newPassenger = {
+      ...newPassengerData,
+      id: `passenger-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      addedAt: now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    };
+    
+    setPassengers(prevPassengers => [...prevPassengers, newPassenger]);
+  };
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -339,7 +428,50 @@ const App = () => {
     }
   };
 
-  
+  // Gestionnaire de feedback avec EmailJS
+  const handleSubmitFeedback = async (feedbackData) => {
+    console.log("💬 Feedback soumis:", feedbackData);
+    
+    try {
+      const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID;
+      const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID;
+      const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY;
+      
+      if (!serviceId || !templateId || !publicKey) {
+        throw new Error('Configuration EmailJS incomplète');
+      }
+      
+      const templateParams = {
+        to_email: 'support-pmr@votre-compagnie.com',
+        feedback_type: feedbackData.type,
+        message: feedbackData.description,
+        user_email: feedbackData.userEmail || user.email,
+        timestamp: new Date(feedbackData.timestamp).toLocaleString('fr-FR'),
+        subject: `[PMR] ${feedbackData.type} - Nouveau signalement`
+      };
+      
+      const result = await emailjs.send(serviceId, templateId, templateParams, publicKey);
+      console.log('✅ Email envoyé avec succès:', result);
+      alert('✅ Votre signalement a été envoyé avec succès !');
+      
+    } catch (error) {
+      console.error('❌ Erreur envoi EmailJS:', error);
+      
+      const subject = encodeURIComponent(`[PMR] ${feedbackData.type} - Signalement`);
+      const body = encodeURIComponent(`
+Type: ${feedbackData.type}
+Date: ${new Date(feedbackData.timestamp).toLocaleString('fr-FR')}
+
+Description:
+${feedbackData.description}
+
+Contact: ${feedbackData.userEmail || user.email}
+      `);
+      
+      window.open(`mailto:support-pmr@votre-compagnie.com?subject=${subject}&body=${body}`);
+      alert('⚠️ Votre client email va s\'ouvrir avec le signalement pré-rempli.');
+    }
+  };
   
   // Gestionnaire de succès de connexion
   const handleLoginSuccess = (userData) => {
@@ -375,7 +507,11 @@ const App = () => {
               PMR Assistant
             </Logo>
             
-            <Navigation />
+            <Navigation 
+              onOpenHelp={() => setShowHelpModal(true)}
+              onOpenFeedback={() => setShowFeedbackModal(true)}
+              onOpenAddPassenger={() => setShowAddPassengerModal(true)}
+            />
             
             <HeaderActions>
               <UserInfo>
@@ -422,6 +558,24 @@ const App = () => {
         <Footer>
           &copy; {new Date().getFullYear()} Altair Airport Solutions - Système d'assistance PMR
         </Footer>
+        
+        {/* Modals */}
+        <HelpModal 
+          isOpen={showHelpModal} 
+          onClose={() => setShowHelpModal(false)} 
+        />
+        
+        <FeedbackModal 
+          isOpen={showFeedbackModal} 
+          onClose={() => setShowFeedbackModal(false)}
+          onSubmit={handleSubmitFeedback}
+        />
+        
+        <AddPassengerModal 
+          isOpen={showAddPassengerModal} 
+          onClose={() => setShowAddPassengerModal(false)}
+          onSubmit={handleAddPassenger}
+        />
       </AppContainer>
     </Router>
   );

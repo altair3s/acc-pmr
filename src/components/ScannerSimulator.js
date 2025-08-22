@@ -111,7 +111,7 @@ const RandomButton = styled(Button)`
 // Sample data for random passenger generation
 const airlines = ['AF', 'LH', 'BA', 'KL', 'IB', 'AZ', 'SN', 'LX', 'OS', 'TP'];
 const destinations = ['CDG', 'LHR', 'FRA', 'AMS', 'MAD', 'FCO', 'BRU', 'ZRH', 'VIE', 'LIS'];
-const statuses = ['WCHR', 'WCHS', 'WCHC'];
+const statuses = ['WCHR', 'WCHS', 'WCHC', 'DEAF', 'BLIND'];
 const firstNames = ['Jean', 'Marie', 'Pierre', 'Sophie', 'Thomas', 'Isabelle', 'François', 'Claire', 'Michel', 'Anne'];
 const lastNames = ['Dupont', 'Martin', 'Bernard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent', 'Lefebvre'];
 
@@ -292,6 +292,8 @@ const ScannerSimulator = ({ passengers, setPassengers }) => {
             <option value="WCHR">WCHR</option>
             <option value="WCHS">WCHS</option>
             <option value="WCHC">WCHC</option>
+            <option value="DEAF">DEAF</option>
+            <option value="BLIND">BLIND</option>
           </Select>
         </FormGroup>
         

@@ -8,7 +8,9 @@ import {
   FaCalendarPlus,
   FaCrown,
   FaWalking,
-  FaTrashAlt
+  FaTrashAlt,
+  FaUserCheck,
+  FaCalendarAlt
 } from 'react-icons/fa';
 
 // Animations
@@ -52,6 +54,21 @@ const agentEnRouteAppear = keyframes`
   }
 `;
 
+const assistedPulse = keyframes`
+  0% { 
+    background-color: rgba(40, 167, 69, 0.1);
+    transform: scale(1);
+  }
+  50% { 
+    background-color: rgba(40, 167, 69, 0.2);
+    transform: scale(1.02);
+  }
+  100% { 
+    background-color: rgba(40, 167, 69, 0.1);
+    transform: scale(1);
+  }
+`;
+
 // Styled Components
 const PassengerCardContainer = styled.div`
   animation: ${fadeIn} 0.4s ease-out;
@@ -63,6 +80,7 @@ const PassengerCardContainer = styled.div`
 
 const PassengerCardContent = styled.div`
   background-color: ${props => {
+    if (props.$isAssisted) return 'rgba(40, 167, 69, 0.1)';
     if (props.$isSkyPriority) return '#e0f0ff';
     const { $timeDiffData } = props;
     return $timeDiffData.minutes < 60 ? 'rgba(220, 53, 69, 0.1)' : 'white';
@@ -76,16 +94,20 @@ const PassengerCardContent = styled.div`
   flex-wrap: wrap;
   cursor: pointer;
   
-  /* Couleur du liseré selon le délai */
+  /* Couleur du liseré selon le délai ou l'état */
   border-left: 6px solid ${props => {
+    if (props.$isAssisted) return '#28a745'; // Vert pour assisté
     const { $timeDiffData } = props;
     if ($timeDiffData.minutes >= 90) return '#198754'; // Vert
     if ($timeDiffData.minutes >= 60) return '#ffc107'; // Orange
     return '#dc3545'; // Rouge
   }};
   
-  /* Animation de clignotement selon le délai */
+  /* Animation de clignotement selon le délai ou l'état */
   ${props => {
+    if (props.$isAssisted) {
+      return css`animation: ${assistedPulse} 2s ease-in-out;`;
+    }
     const { $timeDiffData } = props;
     if ($timeDiffData.minutes < 60) {
       return css`animation: ${blinkFast} 1.3s ease-in-out infinite;`;
@@ -124,7 +146,7 @@ const FlightDetails = styled.div`
 const FlightNumber = styled.span`
   font-weight: 600;
   font-size: 1.1rem;
-  color: #0056b3;
+  color: ${props => props.$isAssisted ? '#155724' : '#0056b3'};
 `;
 
 const PassengerInfo = styled.div`
@@ -137,7 +159,10 @@ const PassengerInfo = styled.div`
 const PassengerName = styled.span`
   font-size: 1rem;
   font-weight: 700;
-  color: #212529;
+  color: ${props => props.$isAssisted ? '#155724' : '#212529'};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 `;
 
 const StatusContainer = styled.div`
@@ -206,6 +231,23 @@ const TimeInfo = styled.div`
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
+`;
+
+const DateTimeContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+`;
+
+const DateDisplay = styled.div`
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 `;
 
 const DepartureTimeDisplay = styled.div`
@@ -217,6 +259,7 @@ const DepartureTimeDisplay = styled.div`
   
   /* Couleur de l'horaire selon les délais */
   color: ${props => {
+    if (props.$isAssisted) return '#28a745';
     const { $timeDiffData } = props;
     if ($timeDiffData.minutes >= 90) return '#198754'; // Vert
     if ($timeDiffData.minutes >= 60) return '#ffc107'; // Orange
@@ -238,21 +281,31 @@ const SkyPriorityBadge = styled.div`
   align-items: center;
   gap: 0.5rem;
   background-color: rgba(255, 0, 0, 1);
-  border: 1px solid #FFD700;
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 0.3rem 0.6rem;
   margin-right: 0.5rem;
 `;
 
-const RemoveButton = styled.button`
+const ActionButtonsContainer = styled.div`
   position: absolute;
   top: 50%;
-  right: -3rem;
+  right: -8rem;
   transform: translateY(-50%);
-  background-color: #dc3545;
+  display: flex;
+  gap: 0.5rem;
+  opacity: 0;
+  transition: all 0.2s ease;
+  
+  ${PassengerCardContainer}:hover & {
+    opacity: 1;
+  }
+`;
+
+const ActionButton = styled.button`
+  background-color: ${props => props.$variant === 'assisted' ? '#28a745' : '#dc3545'};
   color: white;
   border: none;
-  border-radius: 50%;
+  border-radius: 6px;
   width: 2.5rem;
   height: 2.5rem;
   display: flex;
@@ -260,61 +313,128 @@ const RemoveButton = styled.button`
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  opacity: 0;
-  
-  ${PassengerCardContainer}:hover & {
-    opacity: 1;
-  }
+  font-size: 0.9rem;
   
   &:hover {
-    background-color: #c82333;
-    transform: translateY(-50%) scale(1.1);
+    background-color: ${props => props.$variant === 'assisted' ? '#218838' : '#c82333'};
+    transform: scale(1.1);
+  }
+  
+  &:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    transform: none;
   }
 `;
 
-// Fonction utilitaire pour extraire l'heure
-const extractTimeHHMM = (timeString) => {
-  if (!timeString) return "??:??";
-  
-  if (/^\d{1,2}:\d{2}$/.test(timeString)) {
-    return timeString;
-  }
-  
-  const dateTimeMatch = timeString.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\s+(\d{1,2}):(\d{2})/);
-  if (dateTimeMatch) {
-    return `${dateTimeMatch[4]}:${dateTimeMatch[5]}`;
-  }
-  
-  const isoMatch = timeString.match(/T(\d{2}):(\d{2})/);
-  if (isoMatch) {
-    return `${isoMatch[1]}:${isoMatch[2]}`;
-  }
-  
-  return timeString;
+const AssistedStatus = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #28a745;
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-left: 1rem;
+`;
+
+// ✅ NOUVELLES FONCTIONS UTILITAIRES POUR GO-ACC ET GO-LIEU
+// Fonction pour vérifier si un agent est en route (GO-ACC OU GO-LIEU rempli)
+const isAgentEnRoute = (passenger) => {
+  const hasGoAcc = passenger.goAcc && passenger.goAcc.trim() !== '';
+  const hasGoLieu = passenger.goLieu && passenger.goLieu.trim() !== '';
+  return hasGoAcc || hasGoLieu;
 };
 
-// Fonction pour calculer la différence de temps en minutes
+// Fonction pour obtenir le nom de l'agent (priorité à GO-ACC, sinon GO-LIEU)
+const getAgentName = (passenger) => {
+  if (passenger.goAcc && passenger.goAcc.trim() !== '') {
+    return passenger.goAcc.trim();
+  }
+  if (passenger.goLieu && passenger.goLieu.trim() !== '') {
+    return passenger.goLieu.trim();
+  }
+  return '';
+};
+
+// Fonction utilitaire pour extraire date et heure
+const extractDateTimeInfo = (timeString) => {
+  if (!timeString) return { date: "", time: "??:??", fullDateTime: null };
+  
+  // Format déjà HH:MM seulement
+  if (/^\d{1,2}:\d{2}$/.test(timeString)) {
+    const today = new Date();
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const fullDateTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes);
+    
+    return {
+      date: today.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+      time: timeString,
+      fullDateTime
+    };
+  }
+  
+  // Format DD/MM/YYYY HH:MM ou DD-MM-YYYY HH:MM
+  const dateTimeMatch = timeString.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\s+(\d{1,2}):(\d{2})/);
+  if (dateTimeMatch) {
+    const day = dateTimeMatch[1].padStart(2, '0');
+    const month = dateTimeMatch[2].padStart(2, '0');
+    const year = dateTimeMatch[3].length === 2 ? `20${dateTimeMatch[3]}` : dateTimeMatch[3];
+    const hours = dateTimeMatch[4].padStart(2, '0');
+    const minutes = dateTimeMatch[5];
+    
+    const fullDateTime = new Date(year, month - 1, day, hours, minutes);
+    
+    return {
+      date: `${day}/${month}`,
+      time: `${hours}:${minutes}`,
+      fullDateTime
+    };
+  }
+  
+  // Format ISO
+  const isoMatch = timeString.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (isoMatch) {
+    const year = isoMatch[1];
+    const month = isoMatch[2];
+    const day = isoMatch[3];
+    const hours = isoMatch[4];
+    const minutes = isoMatch[5];
+    
+    const fullDateTime = new Date(year, month - 1, day, hours, minutes);
+    
+    return {
+      date: `${day}/${month}`,
+      time: `${hours}:${minutes}`,
+      fullDateTime
+    };
+  }
+  
+  return { date: "", time: timeString, fullDateTime: null };
+};
+
+// Fonction utilitaire pour extraire l'heure (conservée pour compatibilité)
+const extractTimeHHMM = (timeString) => {
+  const { time } = extractDateTimeInfo(timeString);
+  return time;
+};
+
+// Fonction pour calculer la différence de temps en minutes (améliorée pour gérer les dates)
 const calculateTimeDifference = (departureTime, currentTime) => {
-  const timeHHMM = extractTimeHHMM(departureTime);
-  if (!timeHHMM || timeHHMM === "??:??") return 120; // Valeur par défaut: 2h
+  const { fullDateTime } = extractDateTimeInfo(departureTime);
+  if (!fullDateTime) return 120; // Valeur par défaut: 2h
   
   try {
-    const [hours, minutes] = timeHHMM.split(':').map(Number);
-    
-    if (isNaN(hours) || isNaN(minutes)) {
-      return 120;
-    }
-    
     const now = currentTime;
-    const departureDate = new Date();
-    departureDate.setHours(hours, minutes, 0, 0);
     
     // Si l'heure de départ est déjà passée aujourd'hui, considérer qu'elle est pour demain
-    if (departureDate < now) {
-      departureDate.setDate(departureDate.getDate() + 1);
+    if (fullDateTime < now) {
+      fullDateTime.setDate(fullDateTime.getDate() + 1);
     }
     
-    const diffMs = departureDate - now;
+    const diffMs = fullDateTime - now;
     const diffMinutes = diffMs / (1000 * 60);
     
     return diffMinutes;
@@ -323,36 +443,38 @@ const calculateTimeDifference = (departureTime, currentTime) => {
   }
 };
 
-// Fonction pour vérifier si un vol est déjà passé
+// Fonction pour vérifier si un vol est déjà passé (améliorée)
 const isFlightPassed = (departureTime, currentTime) => {
-  const timeHHMM = extractTimeHHMM(departureTime);
-  if (!timeHHMM || timeHHMM === "??:??") return false;
+  const { fullDateTime } = extractDateTimeInfo(departureTime);
+  if (!fullDateTime) return false;
   
   try {
-    const [hours, minutes] = timeHHMM.split(':').map(Number);
-    
-    if (isNaN(hours) || isNaN(minutes)) {
-      return false;
-    }
-    
     const now = currentTime;
-    const departureDate = new Date();
-    departureDate.setHours(hours, minutes, 0, 0);
+    // Ajouter une marge de 30 minutes
+    const marginTime = new Date(now.getTime());
     
-    return departureDate < now;
+    return fullDateTime < marginTime;
   } catch (e) {
     return false;
   }
 };
 
-const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
+const PassengerItem = ({ 
+  passenger, 
+  onToggleSkyPriority, 
+  onMarkAsAssisted,
+  onRemove 
+}) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isNewlyAddedAgent, setIsNewlyAddedAgent] = useState(false);
   const [agentEnRouteKey, setAgentEnRouteKey] = useState(0);
   const newlyAddedTimerRef = useRef(null);
+  
+  // ✅ MISE À JOUR: Références pour surveiller GO-ACC ET GO-LIEU
   const prevGoAccRef = useRef(passenger?.goAcc || '');
+  const prevGoLieuRef = useRef(passenger?.goLieu || '');
 
-  // Données sécurisées du passager
+  // ✅ MISE À JOUR: Données sécurisées du passager avec GO-LIEU
   const safePassenger = {
     id: passenger.id,
     lastName: passenger.lastName || 'Sans nom',
@@ -365,7 +487,10 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
       minute: '2-digit'
     }),
     isSkyPriority: passenger.isSkyPriority || false,
+    isAssisted: passenger.isAssisted || false,
+    assistedAt: passenger.assistedAt || null,
     goAcc: passenger.goAcc || '',
+    goLieu: passenger.goLieu || '', // ✅ NOUVEAU CHAMP
     idPax: passenger.idPax
   };
 
@@ -393,20 +518,30 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
     return isFlightPassed(safePassenger.departureTime, currentTime);
   }, [safePassenger.departureTime, currentTime]);
 
-  // Vérifier si un agent est en route
-  const isAgentEnRoute = safePassenger.goAcc && safePassenger.goAcc.trim() !== '';
+  // ✅ MISE À JOUR: Vérifier si un agent est en route (GO-ACC OU GO-LIEU)
+  const agentEnRoute = isAgentEnRoute(safePassenger);
+  const agentName = getAgentName(safePassenger);
   
-  // Afficher l'heure de départ
-  const displayTime = extractTimeHHMM(safePassenger.departureTime);
+  // Extraire les informations de date et heure
+  const { date, time } = extractDateTimeInfo(safePassenger.departureTime);
 
-  // Surveillance des changements de goAcc
+  // ✅ MISE À JOUR: Surveillance des changements de GO-ACC ET GO-LIEU
   useEffect(() => {
     const currentGoAcc = passenger?.goAcc || '';
+    const currentGoLieu = passenger?.goLieu || '';
     const prevGoAcc = prevGoAccRef.current;
+    const prevGoLieu = prevGoLieuRef.current;
     
-    // Détecter un changement de vide vers rempli
-    if (prevGoAcc.trim() === '' && currentGoAcc.trim() !== '') {
-      console.log(`🚶 Animation déclenchée pour ${safePassenger.lastName}: "${currentGoAcc}"`);
+    // ✅ VÉRIFIER LES CHANGEMENTS POUR LES DEUX CHAMPS
+    const wasAgentEnRoute = (prevGoAcc.trim() !== '') || (prevGoLieu.trim() !== '');
+    const isNowAgentEnRoute = (currentGoAcc.trim() !== '') || (currentGoLieu.trim() !== '');
+    
+    // Détecter un changement vers "agent en route"
+    if (!wasAgentEnRoute && isNowAgentEnRoute) {
+      const newAgentName = currentGoAcc.trim() || currentGoLieu.trim();
+      const changeSource = currentGoAcc.trim() ? 'GO-ACC' : 'GO-LIEU';
+      
+      console.log(`🚶 Animation déclenchée pour ${safePassenger.lastName}: "${newAgentName}" (${changeSource})`);
       
       setIsNewlyAddedAgent(true);
       setAgentEnRouteKey(prev => prev + 1);
@@ -419,8 +554,8 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
         setIsNewlyAddedAgent(false);
       }, 5000);
     }
-    // Détecter un changement de rempli vers vide
-    else if (prevGoAcc.trim() !== '' && currentGoAcc.trim() === '') {
+    // Détecter un changement vers "pas d'agent"
+    else if (wasAgentEnRoute && !isNowAgentEnRoute) {
       console.log(`🛑 Agent retiré pour ${safePassenger.lastName}`);
       setIsNewlyAddedAgent(false);
       if (newlyAddedTimerRef.current) {
@@ -428,17 +563,19 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
       }
     }
     
+    // ✅ MISE À JOUR DES RÉFÉRENCES POUR LES DEUX CHAMPS
     prevGoAccRef.current = currentGoAcc;
-  }, [passenger?.goAcc, safePassenger.lastName]);
+    prevGoLieuRef.current = currentGoLieu;
+  }, [passenger?.goAcc, passenger?.goLieu, safePassenger.lastName]);
 
-  // Écouter les événements depuis PassengerList
+  // ✅ MISE À JOUR: Écouter les événements depuis PassengerList avec informations sur les deux champs
   useEffect(() => {
     const handleAgentStatusChange = (event) => {
-      const { passengerId, idPax, hasAgent, isInitial, isNew, isRemoved } = event.detail;
+      const { passengerId, idPax, hasAgent, isInitial, isNew, isRemoved, agentName, changeSource } = event.detail;
       
       if (passengerId === safePassenger.id || idPax === safePassenger.idPax) {
         console.log(`🎬 Événement reçu pour ${safePassenger.lastName}:`, {
-          hasAgent, isInitial, isNew, isRemoved
+          hasAgent, isInitial, isNew, isRemoved, agentName, changeSource
         });
         
         if (hasAgent && (isInitial || isNew)) {
@@ -478,50 +615,63 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
     };
   }, []);
 
-  // Gestionnaire de suppression
+  // Gestionnaires d'événements
   const handleRemove = (e) => {
-    e.stopPropagation(); // Empêcher le clic sur la carte
+    e.stopPropagation();
     if (onRemove) {
       onRemove(safePassenger.id);
     }
   };
 
-  // Gestionnaire de clic pour SkyPriority
+  const handleAssistedClick = (e) => {
+    e.stopPropagation();
+    if (onMarkAsAssisted && !safePassenger.isAssisted) {
+      onMarkAsAssisted(safePassenger.id);
+    }
+  };
+
   const handleCardClick = () => {
-    if (onToggleSkyPriority) {
+    if (onToggleSkyPriority && !safePassenger.isAssisted) {
       onToggleSkyPriority(safePassenger.id);
     }
   };
 
-  // Log pour debug
+  // ✅ MISE À JOUR: Log pour debug avec les deux champs
   console.log(`🎭 Rendu ${safePassenger.lastName}:`, {
     goAcc: safePassenger.goAcc,
-    isAgentEnRoute: isAgentEnRoute,
+    goLieu: safePassenger.goLieu,
+    isAgentEnRoute: agentEnRoute,
+    agentName: agentName,
     isNewlyAddedAgent: isNewlyAddedAgent,
     agentEnRouteKey: agentEnRouteKey,
     timeDiffMinutes: timeDiffData.minutes,
-    isPassed: isPassed
+    isPassed: isPassed,
+    isAssisted: safePassenger.isAssisted
   });
 
   return (
     <PassengerCardContainer $isPassed={isPassed}>
       <PassengerCardContent 
         $isSkyPriority={safePassenger.isSkyPriority}
+        $isAssisted={safePassenger.isAssisted}
         $timeDiffData={timeDiffData}
         onClick={handleCardClick}
       >
         <MainInfo>
           <FlightInfo>
-            <FaPlane size={20} color="#0056b3" />
+            <FaPlane size={20} color={safePassenger.isAssisted ? "#28a745" : "#0056b3"} />
             <FlightDetails>
-              <FlightNumber>{safePassenger.flightNumber}</FlightNumber>
+              <FlightNumber $isAssisted={safePassenger.isAssisted}>
+                {safePassenger.flightNumber}
+              </FlightNumber>
             </FlightDetails>
           </FlightInfo>
           
           <PassengerInfo>
-            <FaUser size={14} color="#212529" />
-            <PassengerName>
+            <FaUser size={14} color={safePassenger.isAssisted ? "#155724" : "#212529"} />
+            <PassengerName $isAssisted={safePassenger.isAssisted}>
               {safePassenger.lastName} {safePassenger.firstName}
+              {safePassenger.isAssisted && <FaUserCheck color="#28a745" size={16} />}
             </PassengerName>
           </PassengerInfo>
 
@@ -530,14 +680,16 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
               {safePassenger.status}
             </StatusBadge>
             
-            {/* Indicateur d'agent en route */}
-            {isAgentEnRoute && (
+            {/* ✅ MISE À JOUR: Indicateur d'agent en route avec nom de l'agent */}
+            {agentEnRoute && !safePassenger.isAssisted && (
               <AgentEnRouteIndicator 
                 key={`agent-${safePassenger.id}-${agentEnRouteKey}`}
                 $isNewlyAdded={isNewlyAddedAgent}
               >
                 <WalkingIcon />
-                <AgentEnRouteText>Agent en route</AgentEnRouteText>
+                <AgentEnRouteText>
+                  Agent en route {agentName && `(${agentName})`}
+                </AgentEnRouteText>
               </AgentEnRouteIndicator>
             )}
           </StatusContainer>
@@ -551,10 +703,28 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
             </SkyPriorityBadge>
           )}
           
-          <DepartureTimeDisplay $timeDiffData={timeDiffData}>
-            <FaClock size={18} />
-            {displayTime}
-          </DepartureTimeDisplay>
+          <DateTimeContainer>
+            {date && (
+              <DateDisplay>
+                <FaCalendarAlt size={12} />
+                {date}
+              </DateDisplay>
+            )}
+            <DepartureTimeDisplay 
+              $timeDiffData={timeDiffData}
+              $isAssisted={safePassenger.isAssisted}
+            >
+              <FaClock size={18} />
+              {time}
+            </DepartureTimeDisplay>
+          </DateTimeContainer>
+          
+          {safePassenger.isAssisted && (
+            <AssistedStatus>
+              <FaUserCheck />
+              Assisté à {safePassenger.assistedAt}
+            </AssistedStatus>
+          )}
           
           <AddedTimeContainer>
             <FaCalendarPlus size={14} />
@@ -563,18 +733,33 @@ const PassengerItem = ({ passenger, onToggleSkyPriority, onRemove }) => {
         </TimeInfo>
       </PassengerCardContent>
       
-      {/* Bouton de suppression */}
-      <RemoveButton 
-        onClick={handleRemove}
-        aria-label="Retirer le passager de la liste"
-        title="Retirer le passager de la liste"
-      >
-        <FaTrashAlt size={14} />
-      </RemoveButton>
+      {/* Boutons d'action */}
+      {!safePassenger.isAssisted && (
+        <ActionButtonsContainer>
+          <ActionButton 
+            $variant="assisted"
+            onClick={handleAssistedClick}
+            aria-label="Marquer comme PMR assisté"
+            title="Marquer ce passager comme assisté par un agent PMR"
+          >
+            <FaUserCheck size={14} />
+          </ActionButton>
+          
+          <ActionButton 
+            $variant="remove"
+            onClick={handleRemove}
+            aria-label="Retirer le passager de la liste"
+            title="Retirer le passager de la liste"
+          >
+            <FaTrashAlt size={14} />
+          </ActionButton>
+        </ActionButtonsContainer>
+      )}
     </PassengerCardContainer>
   );
 };
 
+// ✅ MISE À JOUR: PropTypes avec GO-LIEU
 PassengerItem.propTypes = {
   passenger: PropTypes.shape({
     id: PropTypes.string,
@@ -586,10 +771,14 @@ PassengerItem.propTypes = {
     departureTime: PropTypes.string,
     addedAt: PropTypes.string,
     isSkyPriority: PropTypes.bool,
+    isAssisted: PropTypes.bool,
+    assistedAt: PropTypes.string,
     goAcc: PropTypes.string,
+    goLieu: PropTypes.string, // ✅ NOUVEAU CHAMP
     idPax: PropTypes.string
   }).isRequired,
   onToggleSkyPriority: PropTypes.func,
+  onMarkAsAssisted: PropTypes.func,
   onRemove: PropTypes.func
 };
 

@@ -79,7 +79,7 @@ const ErrorMessage = styled.div`
   border-radius: 0.25rem;
 `;
 
-// Fonction utilitaire pour analyser les données de la Google Sheet
+// ✅ FONCTION DE PARSING MISE À JOUR POUR INCLURE GO-LIEU
 const parseSheetData = (values) => {
   if (!values || !Array.isArray(values) || values.length === 0) {
     return [];
@@ -104,25 +104,26 @@ const parseSheetData = (values) => {
       console.log(`🔧 Ligne ${i + 1} divisée (points-virgules):`, processedRow);
     }
     
-    // Vérifier qu'on a assez de colonnes
-    if (processedRow.length >= 6) {
+    // ✅ MISE À JOUR: Vérifier qu'on a assez de colonnes pour inclure goLieu
+    if (processedRow.length >= 7) { // Augmenté de 6 à 7 pour inclure goLieu
       const passenger = {
         id: `passenger-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        // Structure: Id Pax D | Nom | Prénom | Num Vol D | STD | GO-ACC | SSR1 | Terminal D
+        // ✅ STRUCTURE MISE À JOUR: Id Pax D | Nom | Prénom | Num Vol D | STD | GO-ACC | GO-LIEU | SSR1 | Terminal D
         idPax: String(processedRow[0] || '').trim(),
         lastName: String(processedRow[1] || '').trim(),
         firstName: String(processedRow[2] || '').trim(),
         flightNumber: String(processedRow[3] || '').trim(),
         departureTime: String(processedRow[4] || '').trim(),
         goAcc: String(processedRow[5] || '').trim(),
-        ssr1: String(processedRow[6] || '').trim(),
-        terminalDepart: String(processedRow[7] || '').trim(),
-        status: String(processedRow[6] || 'WCHR').trim(), // Utiliser SSR1 comme status
+        goLieu: String(processedRow[6] || '').trim(), // ✅ NOUVEAU CHAMP
+        ssr1: String(processedRow[7] || '').trim(), // ✅ DÉCALÉ: était [6], maintenant [7]
+        terminalDepart: String(processedRow[8] || '').trim(), // ✅ DÉCALÉ: était [7], maintenant [8]
+        status: String(processedRow[7] || 'WCHR').trim(), // ✅ DÉCALÉ: Utiliser SSR1 comme status
         airline: '', // Pas disponible
         destination: '' // Pas disponible
       };
       
-      // Log pour les passagers avec certains noms (debug)
+      // ✅ LOGS AMÉLIORÉS: Inclure goLieu dans les logs de debug
       if (passenger.lastName && (
         passenger.lastName.toUpperCase().includes('AWAD') ||
         passenger.lastName.toUpperCase().includes('FRANCO') ||
@@ -134,9 +135,32 @@ const parseSheetData = (values) => {
           rowProcessed: processedRow,
           idPax: passenger.idPax,
           goAcc: `"${passenger.goAcc}"`,
+          goLieu: `"${passenger.goLieu}"`, // ✅ NOUVEAU DANS LES LOGS
           ssr1: `"${passenger.ssr1}"`
         });
       }
+      
+      passengers.push(passenger);
+    }
+    // ✅ COMPATIBILITÉ DESCENDANTE: Gérer les anciennes structures sans goLieu
+    else if (processedRow.length >= 6) {
+      console.log(`⚠️ Ligne ${i + 1}: Structure ancienne détectée (sans goLieu)`);
+      const passenger = {
+        id: `passenger-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        // Structure ancienne: Id Pax D | Nom | Prénom | Num Vol D | STD | GO-ACC | SSR1 | Terminal D
+        idPax: String(processedRow[0] || '').trim(),
+        lastName: String(processedRow[1] || '').trim(),
+        firstName: String(processedRow[2] || '').trim(),
+        flightNumber: String(processedRow[3] || '').trim(),
+        departureTime: String(processedRow[4] || '').trim(),
+        goAcc: String(processedRow[5] || '').trim(),
+        goLieu: '', // ✅ NOUVEAU: Vide par défaut pour les anciennes structures
+        ssr1: String(processedRow[6] || '').trim(),
+        terminalDepart: String(processedRow[7] || '').trim(),
+        status: String(processedRow[6] || 'WCHR').trim(),
+        airline: '',
+        destination: ''
+      };
       
       passengers.push(passenger);
     }
@@ -146,7 +170,7 @@ const parseSheetData = (values) => {
   return passengers;
 };
 
-// Fonction de tri alphabétique
+// Fonction de tri alphabétique (inchangée)
 const sortByLastName = (a, b) => {
   const lastNameA = (a.lastName || '').toLowerCase();
   const lastNameB = (b.lastName || '').toLowerCase();
@@ -171,9 +195,9 @@ const PassengerSelector = ({ onSelect }) => {
   useEffect(() => {
     const fetchPassengers = async () => {
       try {
-        // Configuration
+        // ✅ CONFIGURATION MISE À JOUR: Range étendu pour inclure goLieu
         const SHEET_ID = process.env.REACT_APP_SHEET_ID || '1p5Pbkam5yhXMcA7HoaksPlslf9Y9Z8X9ZLFLpUz-r_w';
-        const SHEET_RANGE = process.env.REACT_APP_SHEET_RANGE || 'Jalons!A1:H5000';
+        const SHEET_RANGE = process.env.REACT_APP_SHEET_RANGE || 'Jalons!A1:I5000'; // ✅ ÉTENDU DE H5000 À I5000
         const API_KEY = process.env.REACT_APP_GOOGLE_API_KEY;
         
         console.log("🔧 PassengerSelector Configuration:", {
@@ -196,7 +220,7 @@ const PassengerSelector = ({ onSelect }) => {
         
         const data = await response.json();
         
-        // Traitement des données
+        // Traitement des données avec la nouvelle fonction de parsing
         const passengersData = parseSheetData(data.values);
         const sortedPassengers = [...passengersData].sort(sortByLastName);
         
@@ -222,10 +246,12 @@ const PassengerSelector = ({ onSelect }) => {
     if (passengerId) {
       const selected = passengers.find(p => p.id === passengerId);
       if (selected && onSelect) {
+        // ✅ LOGS AMÉLIORÉS: Inclure goLieu
         console.log("✅ Passager sélectionné:", {
           nom: `${selected.lastName} ${selected.firstName}`,
           idPax: selected.idPax,
           goAcc: `"${selected.goAcc}"`,
+          goLieu: `"${selected.goLieu}"`, // ✅ NOUVEAU DANS LES LOGS
           ssr1: `"${selected.ssr1}"`
         });
         onSelect(selected);
@@ -245,22 +271,21 @@ const PassengerSelector = ({ onSelect }) => {
 
   return (
     <SelectorContainer>
-  <SelectStyled
-    value={selectedPassengerId}
-    onChange={handleChange}
-    aria-label="Sélectionner un passager"
-  >
-    <option value="">
-      Sélectionner un passager ({passengers.length})
-    </option>
-    {passengers.map((passenger) => (
-      <option key={passenger.id} value={passenger.id}>
-        {passenger.lastName} {passenger.firstName} - {passenger.flightNumber} - {passenger.departureTime}
-      </option>
-    ))}
-  </SelectStyled>
-</SelectorContainer>
-
+      <SelectStyled
+        value={selectedPassengerId}
+        onChange={handleChange}
+        aria-label="Sélectionner un passager"
+      >
+        <option value="">
+          Sélectionner un passager ({passengers.length})
+        </option>
+        {passengers.map((passenger) => (
+          <option key={passenger.id} value={passenger.id}>
+            {passenger.lastName} {passenger.firstName} - {passenger.flightNumber} - {passenger.departureTime}
+          </option>
+        ))}
+      </SelectStyled>
+    </SelectorContainer>
   );
 };
 
